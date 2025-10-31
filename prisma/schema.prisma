@@ -1,0 +1,133 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Account {
+  id                       String  @id @default(cuid())
+  userId                   String
+  type                     String
+  provider                 String
+  providerAccountId        String
+  refresh_token            String?
+  access_token             String?
+  expires_at               Int?
+  token_type               String?
+  scope                    String?
+  id_token                 String?
+  session_state            String?
+  refresh_token_expires_in Int?
+  user                     User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+}
+
+model User {
+  id             String             @id @default(cuid())
+  name           String?
+  email          String?            @unique
+  password       String?
+  emailVerified  DateTime?
+  image          String?
+  createdAt      DateTime           @default(now())
+  updatedAt      DateTime           @default(now()) @updatedAt
+  headline       String?            @db.VarChar(100)
+  bio            String?
+  interests      String[]
+  location       String?
+  website        String?
+  role           UserRole           @default(USER)
+  hasAccess      Boolean            @default(false)
+  accounts       Account[]
+  documents      BaseDocument[]
+  CustomTheme    CustomTheme[]
+  favorites      FavoriteDocument[]
+  GeneratedImage GeneratedImage[]
+}
+
+model BaseDocument {
+  id           String             @id @default(cuid())
+  title        String
+  type         DocumentType
+  userId       String
+  thumbnailUrl String?
+  createdAt    DateTime           @default(now())
+  updatedAt    DateTime           @updatedAt
+  isPublic     Boolean            @default(false)
+  documentType String
+  user         User               @relation(fields: [userId], references: [id])
+  favorites    FavoriteDocument[]
+  presentation Presentation?
+}
+
+model Presentation {
+  id                String       @id @default(cuid())
+  content           Json
+  theme             String       @default("default")
+  imageSource       String       @default("ai")
+  prompt            String?
+  presentationStyle String?
+  language          String?      @default("en-US")
+  outline           String[]
+  searchResults     Json?
+  templateId        String?
+  customThemeId     String?
+  customTheme       CustomTheme? @relation(fields: [customThemeId], references: [id])
+  base              BaseDocument @relation(fields: [id], references: [id], onDelete: Cascade)
+}
+
+model CustomTheme {
+  id            String         @id @default(cuid())
+  name          String
+  description   String?
+  userId        String
+  logoUrl       String?
+  isPublic      Boolean        @default(false)
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+  themeData     Json
+  user          User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  presentations Presentation[]
+
+  @@index([userId])
+}
+
+model FavoriteDocument {
+  id         String       @id @default(uuid())
+  documentId String
+  userId     String
+  document   BaseDocument @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  user       User         @relation(fields: [userId], references: [id])
+}
+
+model GeneratedImage {
+  id        String   @id @default(cuid())
+  url       String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  userId    String
+  prompt    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+enum UserRole {
+  ADMIN
+  USER
+}
+
+enum DocumentType {
+  NOTE
+  DOCUMENT
+  DRAWING
+  DESIGN
+  STICKY_NOTES
+  MIND_MAP
+  RAG
+  RESEARCH_PAPER
+  FLIPBOOK
+  PRESENTATION
+}
